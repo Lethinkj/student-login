@@ -37,6 +37,8 @@ export default function RegisterPage() {
     setIsLoading(true)
     setError(null)
 
+    console.log("[v0] Starting registration process...")
+
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match")
       setIsLoading(false)
@@ -50,6 +52,12 @@ export default function RegisterPage() {
     }
 
     try {
+      console.log("[v0] Attempting to sign up user with data:", {
+        email: formData.email,
+        role: formData.role,
+        fullName: formData.fullName,
+      })
+
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -64,19 +72,36 @@ export default function RegisterPage() {
         },
       })
 
+      console.log("[v0] Sign up response:", { data, error })
+
       if (error) throw error
 
-      if (data.user && !data.session) {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+      if (data.session) {
+        console.log("[v0] Session created immediately, redirecting to dashboard")
+        router.push("/dashboard")
+      } else if (data.user && !data.session) {
+        console.log("[v0] User created but no session, attempting sign in...")
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: formData.email,
           password: formData.password,
         })
-        if (signInError) throw signInError
-      }
 
-      router.push("/dashboard")
+        console.log("[v0] Sign in response:", { signInData, signInError })
+
+        if (signInError) throw signInError
+
+        if (signInData.session) {
+          console.log("[v0] Successfully signed in, redirecting to dashboard")
+          router.push("/dashboard")
+        } else {
+          throw new Error("Unable to create session after registration")
+        }
+      } else {
+        throw new Error("Registration failed - no user created")
+      }
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred")
+      console.error("[v0] Registration error:", error)
+      setError(error instanceof Error ? error.message : "An error occurred during registration")
     } finally {
       setIsLoading(false)
     }

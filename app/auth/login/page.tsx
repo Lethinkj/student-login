@@ -24,15 +24,27 @@ export default function LoginPage() {
     setIsLoading(true)
     setError(null)
 
+    console.log("[v0] Attempting login for:", email)
+
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
+
+      console.log("[v0] Login response:", { data, error })
+
       if (error) throw error
-      router.push("/dashboard")
+
+      if (data.session) {
+        console.log("[v0] Login successful, redirecting to dashboard")
+        router.push("/dashboard")
+      } else {
+        throw new Error("Login failed - no session created")
+      }
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred")
+      console.error("[v0] Login error:", error)
+      setError(error instanceof Error ? error.message : "An error occurred during login")
     } finally {
       setIsLoading(false)
     }
@@ -86,14 +98,14 @@ export default function LoginPage() {
                 <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">{error}</div>
               )}
 
-              <div className="hidden">
+              <div className="mb-4">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleAdminLogin}
-                  className="w-full text-xs text-gray-500 bg-transparent"
+                  className="w-full text-xs text-gray-500 bg-gray-50 hover:bg-gray-100"
                 >
-                  Admin Access
+                  Fill Admin Credentials (Testing)
                 </Button>
               </div>
 
