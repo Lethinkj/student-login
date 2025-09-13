@@ -24,14 +24,33 @@ export default function LoginPage() {
     setIsLoading(true)
     setError(null)
 
+    console.log("[v0] Attempting login with email:", email)
+
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
-      if (error) throw error
-      router.push("/dashboard")
+
+      console.log("[v0] Login response:", { data, error })
+
+      if (error) {
+        if (error.message.includes("Email not confirmed")) {
+          setError("Please check your email and click the confirmation link before signing in.")
+        } else if (error.message.includes("Invalid login credentials")) {
+          setError("Invalid email or password. Please check your credentials and try again.")
+        } else {
+          setError(error.message)
+        }
+        return
+      }
+
+      if (data.user) {
+        console.log("[v0] Login successful, redirecting to dashboard")
+        router.push("/dashboard")
+      }
     } catch (error: unknown) {
+      console.log("[v0] Login error:", error)
       setError(error instanceof Error ? error.message : "An error occurred")
     } finally {
       setIsLoading(false)
@@ -86,14 +105,14 @@ export default function LoginPage() {
                 <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">{error}</div>
               )}
 
-              <div className="hidden">
+              <div className="mb-2">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleAdminLogin}
-                  className="w-full text-xs text-gray-500 bg-transparent"
+                  className="w-full text-xs text-gray-500 bg-gray-50 hover:bg-gray-100"
                 >
-                  Admin Access
+                  Fill Admin Credentials (Testing)
                 </Button>
               </div>
 

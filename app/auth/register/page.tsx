@@ -49,11 +49,14 @@ export default function RegisterPage() {
       return
     }
 
+    console.log("[v0] Attempting registration with:", { email: formData.email, role: formData.role })
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
+          emailRedirectTo: undefined, // Disable email confirmation redirect
           data: {
             full_name: formData.fullName,
             role: formData.role,
@@ -64,18 +67,35 @@ export default function RegisterPage() {
         },
       })
 
+      console.log("[v0] Registration response:", { data, error })
+
       if (error) throw error
 
       if (data.user && !data.session) {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        console.log("[v0] User created but no session, attempting sign in")
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: formData.email,
           password: formData.password,
         })
-        if (signInError) throw signInError
+
+        console.log("[v0] Sign in after registration:", { signInData, signInError })
+
+        if (signInError) {
+          if (signInError.message.includes("Email not confirmed")) {
+            setError(
+              "Registration successful! However, you may need to confirm your email before signing in. Please check your email or contact support.",
+            )
+          } else {
+            throw signInError
+          }
+          return
+        }
       }
 
+      console.log("[v0] Registration successful, redirecting to dashboard")
       router.push("/dashboard")
     } catch (error: unknown) {
+      console.log("[v0] Registration error:", error)
       setError(error instanceof Error ? error.message : "An error occurred")
     } finally {
       setIsLoading(false)
